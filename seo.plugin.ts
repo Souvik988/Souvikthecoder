@@ -1,12 +1,11 @@
 // Build-time SEO / GEO: turns src/content.ts into head tags, JSON-LD, a static pre-render of
 // every word on the page (for crawlers and AI agents that don't run JS), one crawlable
 // case-study page per product (/work/<id>/), llms.txt, robots.txt, a web manifest and a sitemap.
-// Set SITE_URL (e.g. SITE_URL=https://example.com npm run build) for absolute URLs,
-// canonical links and sitemap.xml.
+// Override SITE_URL when the canonical production domain changes.
 import type { Plugin } from 'vite'
 import { site, hero, ventures, projects, capabilities, faq, about, contact, waLink, waHello, waProject, opslinProject, type Project } from './src/content'
 
-const SITE = (process.env.SITE_URL || '').replace(/\/$/, '')
+const SITE = (process.env.SITE_URL || 'https://souvikthecoder.in').replace(/\/$/, '')
 const abs = (p: string) => (SITE ? SITE + p : p)
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const ld = (o: unknown) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`
@@ -256,13 +255,12 @@ function robots() {
 }
 
 function sitemap() {
-  const day = new Date().toISOString().slice(0, 10)
-  const url = (path: string, imgs: string[], pr: string) =>
-    `  <url>\n    <loc>${SITE}${path}</loc>\n    <lastmod>${day}</lastmod>\n    <priority>${pr}</priority>\n${imgs.map((s) => `    <image:image><image:loc>${SITE}${s}</image:loc></image:image>`).join('\n')}\n  </url>`
+  const url = (path: string, imgs: string[]) =>
+    `  <url>\n    <loc>${esc(abs(path))}</loc>\n${[...new Set(imgs)].map((s) => `    <image:image><image:loc>${esc(abs(s))}</image:loc></image:image>`).join('\n')}\n  </url>`
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${url('/', ['/og/souvik.jpg', '/img/about_cap.webp'], '1.0')}
-${cases.map((p) => url(page(p), [`/og/${p.id}.jpg`, ...shotsOf(p).map((s) => s.src)], '0.8')).join('\n')}
+${url('/', ['/og/souvik.jpg', '/img/about_cap.webp'])}
+${cases.map((p) => url(page(p), [`/og/${p.id}.jpg`, ...shotsOf(p).map((s) => s.src)])).join('\n')}
 </urlset>
 `
 }
